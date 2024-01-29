@@ -1,0 +1,35 @@
+on:
+  workflow_dispatch:
+
+name: Test Dynamic Matrices
+
+jobs:
+  # https://stackoverflow.com/questions/65056670/is-it-possible-to-have-a-dynamic-strategy-matrix-in-a-workflow-in-github-actions
+  matrix-init:
+    runs-on: ubuntu-latest
+    # Map a step output to a job output
+    outputs:
+      config: ${{ steps.combinator.outputs.combinations }}
+    steps:
+      - name: setup-matrix-combos
+        run: |
+          MATRIX_PARAMS_COMBINATIONS='
+              {"pkg": "@angular/core", "version": "1.2.3"},
+              {"pkg": "vue", "version": "2.3.4"},
+              {"pkg": "react", "version": "0.0.0-just-kidding"}
+          '
+
+          OUTPUT_ARRAY=$(echo {\"include\":[$MATRIX_PARAMS_COMBINATIONS]})
+          echo "MATRIX_COMBOS=$OUTPUT_ARRAY" >> $GITHUB_ENV
+      - id: combinator
+        run: |
+          echo "combinations=$MATRIX_COMBOS" >> "$GITHUB_OUTPUT"
+  matrix-run:
+    runs-on: ubuntu-latest
+    needs: matrix-init
+    strategy:
+      matrix: ${{ fromJson(needs.matrix-init.outputs.config) }}
+    steps:
+      - name: validation
+        run: |
+          echo "Job details: ${{ matrix.pkg }} ${{ matrix.version }}"
